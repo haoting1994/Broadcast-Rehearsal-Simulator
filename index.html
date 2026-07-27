@@ -512,6 +512,7 @@ function RundownSimulator() {
 
   // freely-draggable overlay cards: title cards (people) + QA tag cards
   const [cgCards, setCgCards] = useState([]);
+  const [cgFader, setCgFader] = useState(0); // 0-100, controls title-card fade in/out
   const monitorRef = useRef(null);
   const [liveTab, setLiveTab] = useState("switcher"); // 'switcher' | 'compare' | 'qa'
 
@@ -876,35 +877,37 @@ function RundownSimulator() {
         /* body */
         .body { display: flex; flex: 1; min-height: 0; overflow: hidden; }
         .sidebar {
-          width: 270px; flex-shrink: 0; border-right: 1px solid #1c1f24;
+          width: 270px; flex-shrink: 0; border-right: 1px solid #2a2d33;
           background: #0b0d10; padding: 18px 16px; overflow-y: auto; height: 100%;
         }
         .sec-title {
-          font-size: 10.5px; font-weight: 600; letter-spacing: 0.1em; color: #5b5f67;
+          font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: #7d818a;
           margin: 0 0 10px; text-transform: uppercase;
         }
-        .sec-block { margin-bottom: 20px; padding-bottom: 18px; border-bottom: 1px solid #1c1f24; }
+        .sec-title.tt-teal { color: #2dd4bf; }
+        .sec-title.tt-orange { color: #ff9d4d; }
+        .sec-block { margin-bottom: 20px; padding-bottom: 18px; border-bottom: 1px solid #262931; }
         .sec-block:last-child { border-bottom: none; }
         .field { margin-bottom: 10px; }
-        .field label { display: block; font-size: 10.5px; color: #5b5f67; margin-bottom: 5px; }
+        .field label { display: block; font-size: 10.5px; color: #7d818a; margin-bottom: 5px; }
         .field input {
-          width: 100%; background: #101215; border: 1px solid #22252b; border-radius: 5px;
+          width: 100%; background: #101215; border: 1px solid #454850; border-radius: 5px;
           color: #e8e9eb; font-size: 12.5px; font-family: inherit; padding: 8px 10px;
         }
         .field input:focus { outline: none; border-color: #2dd4bf; }
         .field input[type="number"] { font-family: 'JetBrains Mono', monospace; }
-        .hint-text { font-size: 10.5px; color: #5b5f67; line-height: 1.5; margin: 8px 0 0; }
+        .hint-text { font-size: 10.5px; color: #7d818a; line-height: 1.5; margin: 8px 0 0; }
 
         .up-drop {
-          position: relative; aspect-ratio: 16/9; border-radius: 6px; border: 1.5px dashed #2a2d33;
+          position: relative; aspect-ratio: 16/9; border-radius: 6px; border: 1.5px dashed #4a4d54;
           background: #101215; cursor: pointer; overflow: hidden; margin-bottom: 8px;
           display: flex; align-items: center; justify-content: center; transition: border-color .15s ease;
         }
         .up-drop.up-small { aspect-ratio: 1/1; }
-        .up-drop:hover { border-color: #3a3d44; }
-        .up-drop.has-image { border-style: solid; border-color: #22252b; }
+        .up-drop:hover { border-color: #5a5e66; }
+        .up-drop.has-image { border-style: solid; border-color: #454850; }
         .up-drop img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .up-empty { display: flex; flex-direction: column; align-items: center; gap: 5px; color: #4a4d54; font-size: 10.5px; text-align: center; padding: 0 8px; }
+        .up-empty { display: flex; flex-direction: column; align-items: center; gap: 5px; color: #6b6f77; font-size: 10.5px; text-align: center; padding: 0 8px; }
         .up-clear {
           position: absolute; top: 4px; right: 4px; width: 18px; height: 18px; border-radius: 4px;
           background: rgba(0,0,0,0.6); border: none; color: #d8d9db;
@@ -915,20 +918,26 @@ function RundownSimulator() {
 
         .cg-style-row { display: flex; gap: 6px; margin-top: 4px; }
         .cg-style-btn {
-          flex: 1; font-size: 11px; padding: 7px 0; border-radius: 5px; border: 1px solid #22252b;
-          background: #101215; color: #7d818a; cursor: pointer; font-family: inherit;
+          flex: 1; font-size: 11px; padding: 7px 0; border-radius: 5px; border: 1px solid #454850;
+          background: #101215; color: #9a9ea6; cursor: pointer; font-family: inherit;
         }
         .cg-style-btn.active { border-color: #ff9d4d; color: #ff9d4d; background: #1c1309; }
         .cg-toggle {
-          margin-top: 10px; width: 100%; padding: 10px 0; border-radius: 6px; border: 1px solid #2a2d33;
-          background: #101215; color: #8a8e96; font-family: inherit; font-size: 12.5px; font-weight: 600;
+          margin-top: 10px; width: 100%; padding: 10px 0; border-radius: 6px; border: 1px solid #454850;
+          background: #101215; color: #9a9ea6; font-family: inherit; font-size: 12.5px; font-weight: 600;
           cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 7px;
         }
         .cg-toggle.on { background: #1c1309; border-color: #ff9d4d; color: #ff9d4d; }
 
         /* stage */
-        .stage-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 20px 40px 24px; min-width: 0; overflow-y: auto; height: 100%; }
-        .monitor-frame { width: 100%; max-width: 860px; }
+        .stage-wrap {
+          flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+          padding: 14px 40px 14px; min-width: 0; overflow: hidden; height: 100%;
+          --stage-w-live: min(860px, calc((100vh - 500px) * 16 / 9));
+          --stage-w-full: min(1180px, calc((100vh - 190px) * 16 / 9));
+        }
+        .monitor-frame { width: var(--stage-w-live); max-width: 860px; }
+        .monitor-frame.mf-full { width: var(--stage-w-full); max-width: 1180px; }
         .monitor {
           position: relative; width: 100%; aspect-ratio: 16/9; background: #000;
           border: 3px solid #1c1f24; border-radius: 4px; overflow: hidden;
@@ -1040,7 +1049,7 @@ function RundownSimulator() {
         .lt-bracket .lt-role { font-size: 10.5px; color: #e8e9eb; }
         .lt-bracket .lt-name { font-size: 17px; font-weight: 700; color: #fff; margin-top: 2px; }
 
-        .bus-strip { display: flex; gap: 8px; margin-top: 12px; width: 100%; max-width: 860px; }
+        .bus-strip { display: flex; gap: 8px; margin-top: 8px; width: 100%; max-width: 860px; }
         .bus-thumb { flex: 1; aspect-ratio: 16/9; border-radius: 4px; border: 2px solid #1c1f24; background: #0d0e11; overflow: hidden; position: relative; cursor: pointer; }
         .bus-thumb.selected { border-color: #ff3b30; }
         .bus-thumb img { width: 100%; height: 100%; object-fit: cover; }
@@ -1048,30 +1057,31 @@ function RundownSimulator() {
         .bus-thumb-empty { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #2a2d33; font-size: 9px; font-family: 'JetBrains Mono', monospace; }
 
         /* ---- Datavideo-style physical panel ---- */
+        .console-row { display: flex; align-items: stretch; gap: 12px; margin-top: 12px; width: 100%; max-width: 860px; }
         .dv-panel {
-          margin-top: 18px; width: 100%; max-width: 860px; border-radius: 8px;
+          flex: 1; width: auto; max-width: none; border-radius: 8px;
           background: linear-gradient(180deg, #34363c 0%, #202226 100%);
           border: 1px solid #0a0b0c;
           box-shadow: 0 10px 30px -12px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06);
-          padding: 14px 18px 16px; position: relative;
+          padding: 10px 16px 12px; position: relative;
         }
         .dv-screw { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: #0d0e10; box-shadow: inset 0 1px 1px rgba(0,0,0,0.8), 0 0.5px 0 rgba(255,255,255,0.15); }
-        .dv-label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .dv-label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .dv-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.15em; color: #6b6f77; }
         .dv-led-row { display: flex; gap: 4px; }
         .dv-led { width: 4px; height: 4px; border-radius: 50%; background: #2a2d33; }
         .dv-led.on { background: #2dd4bf; box-shadow: 0 0 4px #2dd4bf; }
         .dv-buttons { display: flex; align-items: center; justify-content: center; gap: 10px; }
         .dv-btn {
-          width: 96px; padding: 12px 0 10px; border-radius: 5px;
+          width: 90px; padding: 9px 0 8px; border-radius: 5px;
           background: linear-gradient(180deg, #46484e 0%, #303236 55%, #2a2c30 100%);
           border: 1px solid #16171a; color: #b7bac0;
           box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -2px 3px rgba(0,0,0,0.4), 0 2px 3px rgba(0,0,0,0.3);
           font-family: 'JetBrains Mono', monospace; cursor: pointer;
-          display: flex; flex-direction: column; align-items: center; gap: 5px; transition: all .1s ease;
+          display: flex; flex-direction: column; align-items: center; gap: 4px; transition: all .1s ease;
         }
         .dv-btn:active { transform: translateY(1px); }
-        .dv-btn .bn { font-size: 19px; font-weight: 700; }
+        .dv-btn .bn { font-size: 17px; font-weight: 700; }
         .dv-btn .bl { font-size: 9px; letter-spacing: 0.05em; opacity: 0.85; }
         .dv-btn .tally { width: 7px; height: 7px; border-radius: 50%; background: #3d1512; margin-bottom: 2px; }
         .dv-btn.on {
@@ -1079,7 +1089,49 @@ function RundownSimulator() {
           border-color: #1a0402; color: #ffcfc7;
         }
         .dv-btn.on .tally { background: #ff3b30; box-shadow: 0 0 8px 2px rgba(255,59,48,0.9); }
-        .dv-divider { width: 1px; height: 46px; background: #16171a; box-shadow: 1px 0 0 rgba(255,255,255,0.05); margin: 0 4px; }
+        .dv-divider { width: 1px; height: 40px; background: #16171a; box-shadow: 1px 0 0 rgba(255,255,255,0.05); margin: 0 4px; }
+
+        /* ---- Title fade fader (T-bar) ---- */
+        .fader-panel {
+          width: 108px; flex-shrink: 0; border-radius: 8px;
+          background: linear-gradient(180deg, #34363c 0%, #202226 100%);
+          border: 1px solid #0a0b0c;
+          box-shadow: 0 10px 30px -12px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06);
+          padding: 8px 8px 10px; position: relative;
+          display: flex; flex-direction: column; align-items: center;
+        }
+        .fader-label-row { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 6px; }
+        .fader-label { font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 0.1em; color: #6b6f77; }
+        .fader-led { width: 4px; height: 4px; border-radius: 50%; background: #2a2d33; }
+        .fader-led.on { background: #ff9d4d; box-shadow: 0 0 4px #ff9d4d; }
+        .fader-track-wrap { position: relative; width: 100%; flex: 1; min-height: 60px; display: flex; align-items: center; justify-content: center; }
+        .fader-rail {
+          position: absolute; top: 6px; bottom: 6px; left: 50%; transform: translateX(-50%);
+          width: 4px; border-radius: 2px; background: linear-gradient(180deg, #0a0b0c, #16171a);
+          box-shadow: inset 0 1px 2px rgba(0,0,0,0.8);
+        }
+        .fader-input {
+          position: absolute; top: 50%; left: 50%;
+          width: calc(100% - 4px); height: 6px;
+          transform: translate(-50%, -50%) rotate(-90deg);
+          -webkit-appearance: none; appearance: none;
+          background: transparent; margin: 0; cursor: pointer;
+        }
+        .fader-input::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          width: 38px; height: 22px; border-radius: 4px;
+          background: linear-gradient(180deg, #d4d7dc 0%, #9a9fa8 45%, #7a7f88 100%);
+          border: 1px solid #4a4d54;
+          box-shadow: 0 2px 5px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.4);
+          cursor: pointer;
+        }
+        .fader-input::-moz-range-thumb {
+          width: 38px; height: 22px; border-radius: 4px;
+          background: linear-gradient(180deg, #d4d7dc 0%, #9a9fa8 45%, #7a7f88 100%);
+          border: 1px solid #4a4d54; cursor: pointer;
+        }
+        .fader-pct { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #ff9d4d; margin-top: 6px; }
+        .fader-caption { font-size: 8px; color: #5b5f67; letter-spacing: 0.06em; margin-top: 1px; text-align: center; }
 
         /* ---- live tab switch (switcher / compare) ---- */
         .live-tabs { display: flex; gap: 2px; background: #14161a; border: 1px solid #22252b; border-radius: 8px; padding: 3px; margin-bottom: 10px; align-self: flex-start; }
@@ -1095,14 +1147,14 @@ function RundownSimulator() {
 
         .next-btn {
           margin-top: 16px; display: flex; align-items: center; gap: 6px;
-          padding: 9px 18px; border-radius: 6px; border: 1px solid #22252b; background: #101215;
-          color: #8a8e96; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+          padding: 9px 18px; border-radius: 6px; border: 1px solid #454850; background: #101215;
+          color: #9a9ea6; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
         }
         .next-btn:hover { border-color: #2dd4bf; color: #7fe9dc; }
 
         /* ---- QA cue editor (sidebar) ---- */
         .qa-cue-editor {
-          background: #101215; border: 1px solid #1c1f24; border-radius: 6px;
+          background: #101215; border: 1px solid #3a3d44; border-radius: 6px;
           padding: 10px 10px 4px; margin-bottom: 10px;
         }
         .qa-cue-editor-head {
@@ -1352,7 +1404,7 @@ function RundownSimulator() {
   }, phase === "opening" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "sec-block"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "sec-title"
+    className: "sec-title tt-teal"
   }, "SESSION TYPE"), /*#__PURE__*/React.createElement("div", {
     className: "cg-style-row"
   }, /*#__PURE__*/React.createElement("button", {
@@ -1370,7 +1422,7 @@ function RundownSimulator() {
   }, "Panel"))), opening.sessionType === "keynote" ? /*#__PURE__*/React.createElement("div", {
     className: "sec-block"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "sec-title"
+    className: "sec-title tt-orange"
   }, "Keynote 講者（依序輪播）"), opening.keynoteSpeakers.map((k, i) => /*#__PURE__*/React.createElement("div", {
     key: k.id,
     className: "qa-cue-editor"
@@ -1470,7 +1522,7 @@ function RundownSimulator() {
   }))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "sec-block"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "sec-title"
+    className: "sec-title tt-teal"
   }, "講者輪播照片"), /*#__PURE__*/React.createElement("div", {
     className: "photo-row"
   }, opening.photos.map((url, i) => /*#__PURE__*/React.createElement(UploadSlot, {
@@ -1507,7 +1559,7 @@ function RundownSimulator() {
   }))), /*#__PURE__*/React.createElement("div", {
     className: "sec-block"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "sec-title"
+    className: "sec-title tt-orange"
   }, "片頭文字"), /*#__PURE__*/React.createElement("div", {
     className: "field"
   }, /*#__PURE__*/React.createElement("label", null, "議程標題"), /*#__PURE__*/React.createElement("input", {
@@ -1527,7 +1579,7 @@ function RundownSimulator() {
   }))), /*#__PURE__*/React.createElement("div", {
     className: "sec-block"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "sec-title"
+    className: "sec-title tt-orange"
   }, "來賓名單"), opening.guests.map((g, i) => /*#__PURE__*/React.createElement("div", {
     key: g.id,
     className: "qa-cue-editor"
@@ -1584,7 +1636,7 @@ function RundownSimulator() {
   }), " 新增來賓")))), phase === "countdown" && /*#__PURE__*/React.createElement("div", {
     className: "sec-block"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "sec-title"
+    className: "sec-title tt-teal"
   }, "倒數設定"), /*#__PURE__*/React.createElement("div", {
     className: "field"
   }, /*#__PURE__*/React.createElement("label", null, "倒數秒數"), /*#__PURE__*/React.createElement("input", {
@@ -1608,7 +1660,7 @@ function RundownSimulator() {
   }), " 重新開始倒數")), phase === "live" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "sec-block"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "sec-title"
+    className: "sec-title tt-teal"
   }, "機位畫面"), cams.map((cam, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
     style: {
@@ -1654,7 +1706,7 @@ function RundownSimulator() {
   })))), /*#__PURE__*/React.createElement("div", {
     className: "sec-block"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "sec-title"
+    className: "sec-title tt-orange"
   }, "畫面字卡（可在畫面上拖曳定位）"), /*#__PURE__*/React.createElement("div", {
     className: "cg-style-row"
   }, /*#__PURE__*/React.createElement("button", {
@@ -1721,7 +1773,7 @@ function RundownSimulator() {
   }))))), liveTab === "qa" && /*#__PURE__*/React.createElement("div", {
     className: "sec-block"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "sec-title"
+    className: "sec-title tt-orange"
   }, "QA 腳本 Cue"), qaCues.map((cue, i) => /*#__PURE__*/React.createElement("div", {
     key: cue.id,
     className: "qa-cue-editor"
@@ -1797,7 +1849,7 @@ function RundownSimulator() {
   }), " 新增 Cue"))), phase === "ending" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "sec-block"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "sec-title"
+    className: "sec-title tt-orange"
   }, "結尾文字"), /*#__PURE__*/React.createElement("div", {
     className: "field"
   }, /*#__PURE__*/React.createElement("label", null, "主標"), /*#__PURE__*/React.createElement("input", {
@@ -1817,7 +1869,7 @@ function RundownSimulator() {
   }))), /*#__PURE__*/React.createElement("div", {
     className: "sec-block"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "sec-title"
+    className: "sec-title tt-teal"
   }, "QR Code"), /*#__PURE__*/React.createElement(UploadSlot, {
     label: "上傳 QR code",
     url: ending.qrUrl,
@@ -1861,7 +1913,7 @@ function RundownSimulator() {
   }, "CAM ", i + 1)), /*#__PURE__*/React.createElement("div", {
     className: "compare-foot"
   }, cam.label)))) : /*#__PURE__*/React.createElement("div", {
-    className: "monitor-frame"
+    className: "monitor-frame" + (phase !== "live" ? " mf-full" : "")
   }, phase === "live" && /*#__PURE__*/React.createElement("div", {
     className: "monitor-status-row"
   }, /*#__PURE__*/React.createElement("div", {
@@ -1993,7 +2045,8 @@ function RundownSimulator() {
     className: "cg-card-drag" + (card.kind === "qa" ? " kind-qa" : " kind-title"),
     style: {
       left: card.x + "%",
-      top: card.y + "%"
+      top: card.y + "%",
+      opacity: card.kind === "title" ? cgFader / 100 : 1
     },
     onMouseDown: startDrag(card.id)
   }, card.kind === "title" ? /*#__PURE__*/React.createElement("div", {
@@ -2120,6 +2173,8 @@ function RundownSimulator() {
   }, "NO SIG"), /*#__PURE__*/React.createElement("span", {
     className: "bus-thumb-label"
   }, i + 1, " ", cam.label)))), /*#__PURE__*/React.createElement("div", {
+    className: "console-row"
+  }, /*#__PURE__*/React.createElement("div", {
     className: "dv-panel"
   }, /*#__PURE__*/React.createElement("div", {
     className: "dv-screw",
@@ -2177,7 +2232,30 @@ function RundownSimulator() {
     className: "bn"
   }, cams.length + 1), /*#__PURE__*/React.createElement("span", {
     className: "bl"
-  }, "MULTI"))))), phase !== "live" && phase !== "ending" && /*#__PURE__*/React.createElement("button", {
+  }, "MULTI")))), /*#__PURE__*/React.createElement("div", {
+    className: "fader-panel"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "fader-label-row"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "fader-label"
+  }, "TITLE"), /*#__PURE__*/React.createElement("span", {
+    className: "fader-led" + (cgFader > 2 ? " on" : "")
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "fader-track-wrap"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "fader-rail"
+  }), /*#__PURE__*/React.createElement("input", {
+    type: "range",
+    min: "0",
+    max: "100",
+    value: cgFader,
+    className: "fader-input",
+    onChange: e => setCgFader(Number(e.target.value))
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "fader-pct mono"
+  }, cgFader, "%"), /*#__PURE__*/React.createElement("div", {
+    className: "fader-caption"
+  }, "FADE IN/OUT")))), phase !== "live" && phase !== "ending" && /*#__PURE__*/React.createElement("button", {
     className: "next-btn",
     onClick: goNext
   }, "下一階段 ", /*#__PURE__*/React.createElement(ChevronRight, {
