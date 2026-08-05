@@ -318,6 +318,47 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
 })();
 
 </script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script>
+(function () {
+  var firebaseConfig = {
+    apiKey: "AIzaSyDeZkZ1Ghsoq1upiLxUSA-NGnoD3zH72s8",
+    authDomain: "livesteam-9175c.firebaseapp.com",
+    projectId: "livesteam-9175c",
+    storageBucket: "livesteam-9175c.firebasestorage.app",
+    messagingSenderId: "256326385968",
+    appId: "1:256326385968:web:18ff0b4b1edfba64fa88f5",
+    measurementId: "G-E5L2YL4ZLL"
+  };
+  try {
+    var app = firebase.initializeApp(firebaseConfig);
+    window.__db = firebase.firestore();
+    window.__storage = firebase.storage();
+    window.__fbReady = true;
+  } catch (err) {
+    console.error("Firebase init failed:", err);
+    window.__fbReady = false;
+  }
+
+  // Uploads a File to Firebase Storage under a unique path and resolves the
+  // public download URL. Used by UploadSlot so persisted images live in
+  // Storage (not as giant base64 strings in Firestore documents).
+  window.__uploadImageToStorage = function (file) {
+    if (!window.__fbReady || !window.__storage) return Promise.resolve(null);
+    var safeName = (file.name || "image").replace(/[^a-zA-Z0-9._-]/g, "_");
+    var path = "livestream-9175c/" + Date.now() + "_" + Math.random().toString(36).slice(2) + "_" + safeName;
+    var ref = window.__storage.ref().child(path);
+    return ref.put(file).then(function (snap) {
+      return snap.ref.getDownloadURL();
+    }).catch(function (err) {
+      console.error("Storage upload failed:", err);
+      return null;
+    });
+  };
+})();
+</script>
 <script>
 
 function Icon(props) {
@@ -441,6 +482,11 @@ function UploadSlot({
     const reader = new FileReader();
     reader.onload = ev => onUpload(ev.target.result);
     reader.readAsDataURL(file);
+    if (window.__uploadImageToStorage) {
+      window.__uploadImageToStorage(file).then(downloadUrl => {
+        if (downloadUrl) onUpload(downloadUrl);
+      });
+    }
   };
   return /*#__PURE__*/React.createElement("div", {
     className: "up-drop" + (url ? " has-image" : "") + (small ? " up-small" : "") + (dragOver ? " drag-over" : ""),
@@ -635,6 +681,48 @@ function RundownSimulator() {
     note: "感謝您的參與，掃描 QR code 填寫問卷回饋。",
     qrUrl: null
   });
+
+  // --- Firebase sync: keep 素材準備 (opening / cams / countdown / ending) ---
+  // persisted so uploaded images and typed text survive a refresh/close.
+  const [fbReady, setFbReady] = useState(false);
+  useEffect(() => {
+    if (!window.__db) {
+      setFbReady(true); // no Firebase configured — behave as before (in-memory only)
+      return;
+    }
+    window.__db.collection("livestream").doc("rundown").get().then(snap => {
+      if (snap.exists) {
+        const d = snap.data() || {};
+        if (d.opening) setOpening(d.opening);
+        if (d.camsPanel) setCamsPanel(d.camsPanel);
+        if (d.camsKeynote) setCamsKeynote(d.camsKeynote);
+        if (typeof d.countdownSeconds === "number") setCountdownSeconds(d.countdownSeconds);
+        if (d.countdownBg !== undefined) setCountdownBg(d.countdownBg);
+        if (d.ending) setEnding(d.ending);
+      }
+      setFbReady(true);
+    }).catch(err => {
+      console.error("Firestore load failed:", err);
+      setFbReady(true);
+    });
+  }, []);
+  useEffect(() => {
+    if (!fbReady || !window.__db) return;
+    const timer = setTimeout(() => {
+      window.__db.collection("livestream").doc("rundown").set({
+        opening,
+        camsPanel,
+        camsKeynote,
+        countdownSeconds,
+        countdownBg,
+        ending,
+        updatedAt: Date.now()
+      }, {
+        merge: true
+      }).catch(err => console.error("Firestore save failed:", err));
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [fbReady, opening, camsPanel, camsKeynote, countdownSeconds, countdownBg, ending]);
 
   // Cue Sheet — pre-production reference document (separate from playback phases)
   const [showCueSheet, setShowCueSheet] = useState(false);
