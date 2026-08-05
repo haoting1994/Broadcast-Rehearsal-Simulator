@@ -324,13 +324,13 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
 <script>
 (function () {
   var firebaseConfig = {
-    apiKey: "AIzaSyDeZkZ1Ghsoq1upiLxUSA-NGnoD3zH72s8",
-    authDomain: "livesteam-9175c.firebaseapp.com",
-    projectId: "livesteam-9175c",
-    storageBucket: "livesteam-9175c.firebasestorage.app",
-    messagingSenderId: "256326385968",
-    appId: "1:256326385968:web:18ff0b4b1edfba64fa88f5",
-    measurementId: "G-E5L2YL4ZLL"
+    apiKey: "AIzaSyAA_lBeMcU_MHwBIakycWMY1qVFQpNFlLw",
+    authDomain: "dt-studio-5bb2b.firebaseapp.com",
+    projectId: "dt-studio-5bb2b",
+    storageBucket: "dt-studio-5bb2b.firebasestorage.app",
+    messagingSenderId: "453498810482",
+    appId: "1:453498810482:web:265ae1a1aac433355e52eb",
+    measurementId: "G-Z2PQWHNZGD"
   };
   try {
     var app = firebase.initializeApp(firebaseConfig);
@@ -348,7 +348,7 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
   window.__uploadImageToStorage = function (file) {
     if (!window.__fbReady || !window.__storage) return Promise.resolve(null);
     var safeName = (file.name || "image").replace(/[^a-zA-Z0-9._-]/g, "_");
-    var path = "livestream-9175c/" + Date.now() + "_" + Math.random().toString(36).slice(2) + "_" + safeName;
+    var path = "rundown-assets/" + Date.now() + "_" + Math.random().toString(36).slice(2) + "_" + safeName;
     var ref = window.__storage.ref().child(path);
     return ref.put(file).then(function (snap) {
       return snap.ref.getDownloadURL();
